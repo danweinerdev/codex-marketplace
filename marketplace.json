@@ -1,0 +1,20 @@
+{
+  "name": "codex-marketplace",
+  "interface": {
+    "displayName": "Codex Marketplace"
+  },
+  "plugins": [
+    {
+      "name": "codex-sdd-planner",
+      "source": {
+        "source": "local",
+        "path": "./plugins/codex-sdd-planner"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

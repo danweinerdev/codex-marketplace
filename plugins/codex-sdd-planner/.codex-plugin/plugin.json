@@ -1,0 +1,20 @@
+{
+  "name": "codex-sdd-planner",
+  "version": "0.1.0",
+  "description": "Spec-driven development workflows for Codex, starting with lane-based code review.",
+  "author": {
+    "name": "Daniel Weiner"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex SDD Planner",
+    "shortDescription": "Run SDD workflows in Codex.",
+    "longDescription": "Codex SDD Planner brings spec-driven development workflows to Codex. This initial version focuses on the lane-based code review system: drift, quality, spec compliance, and blind-spot review lanes with a synthesized result.",
+    "developerName": "Daniel Weiner",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive"
+    ],
+    "defaultPrompt": "Run the SDD code-review workflow for this implementation."
+  }
+}

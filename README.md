@@ -2,6 +2,8 @@
 
 Personal Codex plugin marketplace for `danweinerdev` plugins.
 
+The Codex marketplace manifest lives at `.agents/plugins/marketplace.json`.
+
 ## Plugins
 
 - `codex-sdd-planner` - Spec-driven development workflows for Codex, starting with lane-based code review.

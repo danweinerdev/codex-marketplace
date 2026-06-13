@@ -1,8 +1,8 @@
 # Review Lanes — the project-supplied reviewer socket
 
-`/code-review` always runs four built-in, intent-isolated lanes (`drift-detector`, `quality-scanner`, `spec-compliance`, `blind-spot-finder`). This file defines the **socket** that lets a project add its own specialized review lanes — a SQL-migration reviewer, a Terraform reviewer, an accessibility reviewer — **without touching the plugin**. The plugin grows a socket; projects bring the plug.
+`/sdd-planner:code-review` always runs four built-in, intent-isolated lanes (`drift-detector`, `quality-scanner`, `spec-compliance`, `blind-spot-finder`). This file defines the **socket** that lets a project add its own specialized review lanes — a SQL-migration reviewer, a Terraform reviewer, an accessibility reviewer — **without touching the plugin**. The plugin grows a socket; projects bring the plug.
 
-This file is the single source of truth for the convention. `/code-review` reads it; project authors can create matching Markdown lane instruction files and follow it.
+This file is the single source of truth for the convention. `/sdd-planner:code-review` reads it; project authors can create matching Markdown lane instruction files and follow it.
 
 ## The contract
 
@@ -14,25 +14,25 @@ Two consequences the rest of this file makes good on:
 
 ## Trust boundary (read before enabling)
 
-Discovered lanes are **agent instructions that live in the target repo**, executed with the session's tool access. When you run `/code-review` against a branch you don't fully control -- a contractor's branch, an open-source PR, anything where someone else could have added files under `.codex/sdd-review-lanes/` -- a malicious `*-reviewer.md` can carry instructions to read secrets, call MCP servers, or emit a misleading "no issues." Treat the socket the same way you treat running the repo's own code:
+Discovered lanes are **agent instructions that live in the target repo**, executed with the session's tool access. When you run `/sdd-planner:code-review` against a branch you don't fully control -- a contractor's branch, an open-source PR, anything where someone else could have added files under `.codex/sdd-review-lanes/` -- a malicious `*-reviewer.md` can carry instructions to read secrets, call MCP servers, or emit a misleading "no issues." Treat the socket the same way you treat running the repo's own code:
 
 - Enable project lanes only against repos you trust. The orchestrator **must list discovered lanes to the user before dispatching**, and **must ask for confirmation** when the target repo is not the session's own project.
-- Lanes are **read-only** (see below). The plugin cannot enforce another instruction file's behavior, so `/code-review` trust-gates project lanes and the convention requires read-only operation.
+- Lanes are **read-only** (see below). The plugin cannot enforce another instruction file's behavior, so `/sdd-planner:code-review` trust-gates project lanes and the convention requires read-only operation.
 
 ## Discovery
 
-`/code-review` discovers project lanes by globbing, **non-recursively**, two locations and de-duplicating by the lane frontmatter `name`:
+`/sdd-planner:code-review` discovers project lanes by globbing, **non-recursively**, two locations and de-duplicating by the lane frontmatter `name`:
 
 1. The **target repo's** top-level `.codex/sdd-review-lanes/*-reviewer.md` (the repo whose code is under review, where domain/language reviewers naturally live).
 2. The **user's** `~/.codex/sdd-review-lanes/*-reviewer.md` (useful for personal cross-project reviewers).
 
 It is **not** recursive: per-package `.codex/sdd-review-lanes/` directories in a monorepo are out of scope. From each match it reads **only the socket fields** it mechanically needs: `name`, `reviewLane`, `lane`, `appliesTo`, and `required`. It keeps every file whose `reviewLane` is boolean `true`.
 
-**Read only the socket fields — never the `description` or body at discovery.** `/code-review`'s contract requires the orchestrator's pre-dispatch reads to stay shallow so plan/intent framing can't leak into the `blind-spot-finder` synthesis. A reviewer's `description` is intent-laden and is **not needed to dispatch** — do not read it. (The `appliesTo` globs do leak a little domain signal, e.g. "this diff touches `billing/`"; that's mechanically unavoidable and bounded. The free-text `description` is not, so it stays un-read.)
+**Read only the socket fields — never the `description` or body at discovery.** `/sdd-planner:code-review`'s contract requires the orchestrator's pre-dispatch reads to stay shallow so plan/intent framing can't leak into the `blind-spot-finder` synthesis. A reviewer's `description` is intent-laden and is **not needed to dispatch** — do not read it. (The `appliesTo` globs do leak a little domain signal, e.g. "this diff touches `billing/`"; that's mechanically unavoidable and bounded. The free-text `description` is not, so it stays un-read.)
 
 The `*-reviewer.md` filename is only a discovery hint; **`reviewLane: true` is the actual opt-in.** The marker is load-bearing; honor it strictly.
 
-**Dispatch model.** Project lanes are not separately installed Codex plugin skills. `/code-review` reads a validated lane instruction file after trust gating and uses it as the instruction bundle for a spawned Codex sub-agent. This keeps project lanes portable across repositories without relying on agent registration.
+**Dispatch model.** Project lanes are not separately installed Codex plugin skills. `/sdd-planner:code-review` reads a validated lane instruction file after trust gating and uses it as the instruction bundle for a spawned Codex sub-agent. This keeps project lanes portable across repositories without relying on agent registration.
 
 ## Frontmatter fields
 
@@ -111,13 +111,13 @@ By default a project lane is best-effort: if it doesn't run, the review proceeds
 Review lanes **must be read-only.** They read the diff and the repo and emit findings; they do not modify files, stage changes, or run write-shaped commands. This is not cosmetic: all lanes dispatch in parallel and the built-ins resolve the diff against the live working tree, so a lane that writes during the review can shift the ground under `quality-scanner` and `blind-spot-finder` — the exact cross-lane contamination the four-lane design exists to prevent.
 
 - Lane instruction files must say they are read-only: no file edits, no `git add`, no `git commit`, no `git checkout`, no formatters, no write-shaped MCP calls.
-- The plugin cannot enforce another instruction file's behavior, so this is a convention plus trust gating. To reduce the blast radius, `/code-review` resolves the diff to a fixed base/head reference (a commit SHA where the VCS supports it) and hands all lanes that frozen reference, rather than re-deriving from a tree a peer might mutate.
+- The plugin cannot enforce another instruction file's behavior, so this is a convention plus trust gating. To reduce the blast radius, `/sdd-planner:code-review` resolves the diff to a fixed base/head reference (a commit SHA where the VCS supports it) and hands all lanes that frozen reference, rather than re-deriving from a tree a peer might mutate.
 
 ## Failure domains
 
 There are two, and they behave differently on purpose.
 
-**Built-in four — fatal.** Governed by the `/code-review` hard contract: if any of the four fails to spawn or return a lane report, `/code-review` stops with a loud error and does **not** self-synthesize. The four are the floor; the review is invalid without them.
+**Built-in four — fatal.** Governed by the `/sdd-planner:code-review` hard contract: if any of the four fails to spawn or return a lane report, `/sdd-planner:code-review` stops with a loud error and does **not** self-synthesize. The four are the floor; the review is invalid without them.
 
 **Project lanes — best-effort, never abort the four.** A project lane that fails for any reason is recorded and skipped; synthesis proceeds over the four built-ins plus whatever project lanes did return. Distinguish the outcomes precisely — the orchestrator read each lane's frontmatter at discovery, so it knows the file exists and what `name` it declared, and must not guess at causes it can't see:
 
@@ -140,7 +140,7 @@ A project-lane failure never marks the four built-ins failed or the review *inco
 
 ## Getting changed file paths (VCS-aware, paths only)
 
-`appliesTo` matching needs the *names* of changed files, not their contents. Use the VCS-appropriate name-only listing, run with the working directory set to the **target repo** so paths are target-repo-relative. This is paths, not hunks, so it stays inside `/code-review`'s rule against reading diff content in the primary context.
+`appliesTo` matching needs the *names* of changed files, not their contents. Use the VCS-appropriate name-only listing, run with the working directory set to the **target repo** so paths are target-repo-relative. This is paths, not hunks, so it stays inside `/sdd-planner:code-review`'s rule against reading diff content in the primary context.
 
 | VCS | Changed-path listing | Notes |
 |---|---|---|

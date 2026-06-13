@@ -21,7 +21,7 @@
 ## Diff Scope
 - **Commits reviewed:** {{COMMITS_REVIEWED}}
 - **Files changed:** {{FILES_CHANGED_COUNT}}
-- **Reviewers dispatched:** codex-sdd-planner:drift-detector, codex-sdd-planner:quality-scanner, codex-sdd-planner:spec-compliance, codex-sdd-planner:blind-spot-finder{{PROJECT_LANES_SUFFIX}}
+- **Reviewers dispatched:** drift-detector, quality-scanner, spec-compliance, blind-spot-finder{{PROJECT_LANES_SUFFIX}}
 
 ## Project Review Lanes
 <!-- Omit this section entirely if no project lanes were discovered. -->

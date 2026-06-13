@@ -1,16 +1,16 @@
 ---
-name: code-review
-description: "Review implementation code against the plan for drift, gaps, and blind spots. Triggers: /code-review, review code, check implementation, compare to plan, code vs plan"
+name: "sdd-planner:code-review"
+description: "Review implementation code against the plan for drift, gaps, and blind spots. Trigger with /sdd-planner:code-review, or use natural language such as review code, check implementation, compare to plan, or code vs plan."
 ---
 
-# /code-review — Implementation Code Review
+# /sdd-planner:code-review — Implementation Code Review
 
 ## ⚠️ CONTRACT — READ FIRST
 
 This skill's entire value comes from dispatching four intent-isolated Codex lane agents in parallel and synthesizing their independent reports. You are the orchestrator.
 
 **You MUST:**
-1. Dispatch all four built-in lane agents using Codex sub-agents. Attach or quote the matching lane skill instructions for each spawned agent: `codex-sdd-planner:drift-detector`, `codex-sdd-planner:quality-scanner`, `codex-sdd-planner:spec-compliance`, and `codex-sdd-planner:blind-spot-finder`.
+1. Dispatch all four built-in lane agents using Codex sub-agents. Attach or quote the matching lane instruction file for each spawned agent: `agents/drift-detector.md`, `agents/quality-scanner.md`, `agents/spec-compliance.md`, and `agents/blind-spot-finder.md`.
 2. Dispatch them **in parallel** — spawn all four built-in lanes before waiting for results, plus one additional spawned agent for each matching project review lane (see Step 2e and Step 3).
 3. Give each lane agent only the inputs for its lane. See Step 3 below for the exact input map. Passing extra context destroys the intent isolation that makes the review worthwhile.
 4. Wait for all dispatched lanes (the four built-ins plus any project lanes) to return, then synthesize.
@@ -19,13 +19,13 @@ This skill's entire value comes from dispatching four intent-isolated Codex lane
 1. Read the full diff, the phase doc contents, spec contents, or design contents in the primary context and write findings yourself. That is a single-pass review cosplaying as a four-lane review. It is the bug this contract exists to prevent.
 2. Skip lane dispatch because "you already know the answer" after loading context. The answer you'd produce is exactly the single-pass review this skill exists to replace.
 3. Fall back to self-synthesis if a built-in lane cannot be spawned or cannot run. If a built-in lane fails, **STOP** and return a loud error to the user describing which lane failed and why. Do not silently continue.
-4. Let a lane read outside its input bundle. Built-in lane names are plugin-namespaced in documentation, but each spawned sub-agent is just a Codex agent running the lane instructions you provide.
+4. Let a lane read outside its input bundle. Built-in lanes are internal agent instruction files, not user-triggerable commands; each spawned sub-agent is just a Codex agent running the lane instructions you provide.
 
 **Project review lanes (best-effort, additive).** Beyond the four, a project can plug in its own specialized lanes via the socket defined in `shared/review-lanes.md` (for example a read-only `.codex/sdd-review-lanes/sql-reviewer.md` carrying `reviewLane: true`). These are **additive, read-only, and never abort the four**:
 - The four built-ins are the floor and always run. A project lane only ever *adds* findings — never removes, replaces, or weakens a built-in lane's inputs or dispatch.
 - A project lane that fails to dispatch, errors, or is malformed is **recorded and dropped** — never aborts the four. The strict "STOP on dispatch failure" rule in this contract applies to the **four built-ins only**. Synthesis proceeds over the four plus whatever project lanes returned. (Lane *responsiveness* is the project's responsibility — the socket dispatches and waits; it imposes no timeout, so a lane that hangs will hold up the review.)
 - Failure is **not silent**: a declared lane that didn't run **degrades the verdict headline**, and an opt-in `required: true` lane that didn't run **forces the verdict to BLOCKED** (it gates the verdict, not the floor). The verdict is computed from the four plus any *successful* project lanes.
-- Lanes execute repo-supplied instructions with session tool access, so `/code-review` **confirms discovered lanes** with the user before dispatch when the target repo isn't the session's own project.
+- Lanes execute repo-supplied instructions with session tool access, so `/sdd-planner:code-review` **confirms discovered lanes** with the user before dispatch when the target repo isn't the session's own project.
 
 If you find yourself reading a spec file or running `git diff` against the full patch in the primary context, stop. That work belongs in the sub-agents, not here. (Listing changed file *paths* with `--name-only` for `appliesTo` matching is allowed — that's paths, not content.)
 
@@ -36,7 +36,7 @@ Read `planning-config.json` (at repo root) to find the planning root:
 - `planningRoot` of `"<dir>"` → artifacts under `<dir>/` from repo root
 - `planningRoot` of `"/absolute/path"` → artifacts in an external directory
 
-**Shared specs and templates** (`shared/`) are read from the **plugin directory**, not from the planning root. The plugin directory contains `.codex-plugin/`, `skills/`, and `shared/` as siblings. In a local checkout, use this repository root. In an installed plugin, find the plugin directory by locating `skills/code-review/SKILL.md` under the Codex plugin cache or the active skill path, then strip `skills/code-review/SKILL.md` from the matched path.
+**Shared specs, templates, and built-in lane agents** (`shared/` and `agents/`) are read from the **plugin directory**, not from the planning root. The plugin directory contains `.codex-plugin/`, `skills/`, `agents/`, and `shared/` as siblings. In a local checkout, use this repository root. In an installed plugin, find the plugin directory by locating `skills/code-review/SKILL.md` under the Codex plugin cache or the active skill path, then strip `skills/code-review/SKILL.md` from the matched path.
 
 ## When to Use
 During or after implementation of a plan phase, when you want to verify that the actual code matches what was planned. This skill dispatches four intent-isolated sub-reviewers against the diff and synthesizes their reports into a single review.
@@ -53,10 +53,10 @@ A single reviewer juggling plan, specs, designs, code, and adversarial perspecti
 
 | Agent | Sees | Doesn't see | Role |
 |---|---|---|---|
-| `codex-sdd-planner:drift-detector` | Diff + plan + phase doc + prior debriefs | Specs, designs, code-quality heuristics | Missing work, scope creep, approach drift |
-| `codex-sdd-planner:quality-scanner` | Diff + code | Plan, specs, designs | Correctness, safety, maintainability (including comment quality: WHAT-restating, PR-time-context, and tombstone comments are flagged as noise), testing, over-engineering, intent-blind |
-| `codex-sdd-planner:spec-compliance` | Diff + specs + designs | Plan, phase doc | Requirements coverage, contract violations |
-| `codex-sdd-planner:blind-spot-finder` | Diff only | Everything else | Adversarial fresh eyes, scenarios the author did not consider |
+| `drift-detector` (`agents/drift-detector.md`) | Diff + plan + phase doc + prior debriefs | Specs, designs, code-quality heuristics | Missing work, scope creep, approach drift |
+| `quality-scanner` (`agents/quality-scanner.md`) | Diff + code | Plan, specs, designs | Correctness, safety, maintainability (including comment quality: WHAT-restating, PR-time-context, and tombstone comments are flagged as noise), testing, over-engineering, intent-blind |
+| `spec-compliance` (`agents/spec-compliance.md`) | Diff + specs + designs | Plan, phase doc | Requirements coverage, contract violations |
+| `blind-spot-finder` (`agents/blind-spot-finder.md`) | Diff only | Everything else | Adversarial fresh eyes, scenarios the author did not consider |
 
 Each runs in its own fresh context. The whole point is that one reviewer's framing cannot contaminate another's.
 
@@ -113,7 +113,7 @@ You should NOT have read any spec contents, design contents, diff hunks, the bod
 
 **This is the step the contract at the top of this file is about.** Spawn all four built-in Codex lane agents in parallel, plus one spawned agent per matching project lane from Step 2e. Each spawned agent must receive the lane instruction file plus only the inputs for its lane. Do not wait for one built-in lane before spawning the next.
 
-**Spawned lane 1 — `codex-sdd-planner:drift-detector`**
+**Spawned lane 1 - `drift-detector` (`agents/drift-detector.md`)**
 - Plan path, phase doc path
 - Prior debrief paths
 - Target repo path
@@ -122,7 +122,7 @@ You should NOT have read any spec contents, design contents, diff hunks, the bod
 - Language-verification note (if applicable)
 - ❌ Do NOT pass spec paths, design paths, or any diff content.
 
-**Spawned lane 2 — `codex-sdd-planner:quality-scanner`**
+**Spawned lane 2 - `quality-scanner` (`agents/quality-scanner.md`)**
 - Target repo path
 - Detected VCS label
 - Resolved diff command
@@ -130,20 +130,20 @@ You should NOT have read any spec contents, design contents, diff hunks, the bod
 - Language-verification note (if applicable)
 - ❌ Do NOT pass plan path, phase path, spec paths, or design paths. Intent-blindness is the point.
 
-**Spawned lane 3 — `codex-sdd-planner:spec-compliance`**
+**Spawned lane 3 - `spec-compliance` (`agents/spec-compliance.md`)**
 - Spec paths, design paths
 - Target repo path
 - Detected VCS label
 - Resolved diff command
 - ❌ Do NOT pass plan path or phase path.
 
-**Spawned lane 4 — `codex-sdd-planner:blind-spot-finder`**
+**Spawned lane 4 - `blind-spot-finder` (`agents/blind-spot-finder.md`)**
 - Target repo path
 - Detected VCS label
 - Resolved diff command
 - ❌ Do NOT pass anything else. Not the plan, not the specs, not the designs, not the phase doc, not even the language-verification note. The diff-only guarantee is this reviewer's entire contribution.
 
-**Spawned lanes 5..N — project review lanes (if any, from Step 2e).** Spawn one additional Codex agent per matching project lane. For each:
+**Spawned lanes 5..N - project review lanes (if any, from Step 2e).** Spawn one additional Codex agent per matching project lane. For each:
 - The spawned agent's instruction bundle is the full project lane file body after validation and trust gating.
 - Pass the input bundle its `lane` resolved to: a recognized `lane` (`code`/`spec`/`plan`/`diff-only`) gets the **same** inputs as the matching built-in above; an absent or unrecognized `lane` gets only the base inputs (target repo path, detected VCS label, resolved diff command) and is left to gather anything else itself.
 - ❌ Do NOT hand a standalone or unrecognized lane the plan, specs, or designs — it gets base inputs only; if it wants intent, it reads it itself. ✅ Do hand a recognized-lane reviewer exactly the bundle that lane names, and nothing more.
@@ -154,7 +154,7 @@ Wait for all dispatched lanes to return before continuing. The socket imposes no
 **If a built-in lane spawn or result (one of the four above) fails**, stop immediately and return a loud error to the user:
 
 ```
-ERROR: /code-review could not run built-in lane `codex-sdd-planner:<name>`.
+ERROR: /sdd-planner:code-review could not run built-in lane `<name>`.
 Reason: <the exact spawn or lane error>
 The four-lane review cannot proceed. Fix the dispatch issue and re-run.
 ```
@@ -293,4 +293,4 @@ This skill always writes a review artifact under `reviews/NN-<slug>-review.md` i
 - Related designs: `Designs/`
 - Prior debriefs: `Plans/<PlanName>/notes/`
 - Local repo paths: `planning-config.local.json`
-- Lane agents spawned from the primary context: `codex-sdd-planner:drift-detector`, `codex-sdd-planner:quality-scanner`, `codex-sdd-planner:spec-compliance`, `codex-sdd-planner:blind-spot-finder`
+- Lane agents spawned from the primary context: `agents/drift-detector.md`, `agents/quality-scanner.md`, `agents/spec-compliance.md`, `agents/blind-spot-finder.md`

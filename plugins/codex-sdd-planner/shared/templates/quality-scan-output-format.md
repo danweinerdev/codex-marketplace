@@ -1,9 +1,9 @@
 # Quality-Scanner Output Format — Canonical Vocabulary
 
-This file is the single source of truth for the **vocabulary** every quality-scanner report uses: severity terms, lens terms, validation discipline, and what each finding must cite. It is NOT a single mandated report shape — `/code-review` consumes a sectioned per-finding report (the agent's default), while `/implement`'s per-task-findings rendering wants a compact markdown table. Both shapes use the vocabulary defined here.
+This file is the single source of truth for the **vocabulary** every quality-scanner report uses: severity terms, lens terms, validation discipline, and what each finding must cite. It is NOT a single mandated report shape — `/sdd-planner:code-review` consumes a sectioned per-finding report (the agent's default), while `/implement`'s per-task-findings rendering wants a compact markdown table. Both shapes use the vocabulary defined here.
 
 Reference this file from:
-- `skills/quality-scanner/SKILL.md` — for the lane's default sectioned output format
+- `agents/quality-scanner.md` — for the lane's default sectioned output format
 - `shared/templates/quality-scan-prompt.md` — for `/implement`'s table-shaped dispatch
 - `shared/templates/per-task-findings.md` — for the user-facing rendering of dispatch results
 
